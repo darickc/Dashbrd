@@ -10,7 +10,7 @@ using Ical.Net.DataTypes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 
-namespace Dashbrd.Shared.Modules
+namespace Dashbrd.Shared.Modules.Calendar
 {
     public partial class Calendar
     {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Timers;
 
-namespace Dashbrd.Shared.Modules
+namespace Dashbrd.Shared.Modules.Clock
 {
     public partial class Clock
     {

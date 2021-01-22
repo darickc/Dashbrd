@@ -8,7 +8,7 @@ using CSharpFunctionalExtensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 
-namespace Dashbrd.Shared.Modules
+namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
 {
     public partial class BackgroundImageSlideshow
     {
