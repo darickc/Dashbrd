@@ -1,0 +1,1 @@
+.clock{display:grid;justify-items:center;align-items:start}.clock .time{font-size:2em}.clock .time .seconds{font-size:.75em;position:relative;bottom:.25em}

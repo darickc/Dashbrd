@@ -1,0 +1,56 @@
+@if (WeatherInfo != null)
+{
+    var current = WeatherInfo.Current;
+
+    <div class="weather-div">
+        <div>
+            <div class="medium">
+                <span class="wi wi-strong-wind"></span>
+                <span>
+
+                    @current.Wind_speed
+                    <sup>
+                        @current.CardinalWindDirection()
+                        &nbsp;
+                    </sup>
+                </span>
+
+                <span class="wi wi-@current.NextSunAction()"></span>
+                <span>
+                    @current.GetSunriseSunset()
+                </span>
+            </div>
+        </div>
+        <div class="large light">
+            <span class="wi weathericon @IconTable[current.Weather[0].Icon]"></span>
+            <span class="bright">
+                @current.Temp.Degree()
+            </span>
+        </div>
+
+        <div class="medium">
+            <span>
+                Feels Like @current.Feels_Like.Degree()
+            </span>
+        </div>
+        <div class="forecast">
+            <table class="small">
+                @foreach (var daily in WeatherInfo.Daily)
+                {
+                    <tr>
+                        <td class="day">@daily.Dt.UnixTimeStampToDateTime().ToString("ddd")</td>
+                        <td class="bright weather-icon">
+                            <span class="wi weathericon @IconTable[daily.Weather[0].Icon]"></span>
+                        </td>
+                        <td class="align-right bright max-temp">@daily.Temp.Max.Degree()</td>
+                        <td class="align-right min-temp">@daily.Temp.Min.Degree()</td>
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div>Loading...</div>
+}

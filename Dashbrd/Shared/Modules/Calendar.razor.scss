@@ -1,0 +1,29 @@
+table{
+    border-collapse:collapse;
+}
+
+tr{
+    td{
+        border-bottom: 1px solid #808080;
+        padding-top:5px;
+        padding-bottom:5px;
+    }
+    td:first-child{
+        font-size: 2em;
+        text-align:center;
+        padding-right:10px;
+    }
+}
+.calendar {
+    animation: opacity 1s ease-in-out;
+}
+
+@keyframes opacity {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}

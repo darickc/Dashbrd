@@ -1,0 +1,88 @@
+@using Ical.Net.CalendarComponents
+
+@if (Events != null)
+{
+    <table class="calendar small">
+        @foreach (var item in Events)
+        {
+            if (item.Source is CalendarEvent source)
+            {
+                var timeSpan = item.Period.StartTime.AsDateTimeOffset.ToLocalTime() - DateTime.Now;
+                var start = item.Period.StartTime.AsDateTimeOffset.ToLocalTime();
+                var end = item.Period.EndTime.AsDateTimeOffset.ToLocalTime();
+                <tr>
+                    <td class="bright">
+                        @start.Day
+                    </td>
+                    <td>
+                        <div class="bright">
+                            @source.Summary
+                        </div>
+                        <div>
+                            @if (source.IsAllDay)
+                            {
+                                if (start.Date == DateTime.Now.Date)
+                                {
+                                    <text>Today</text>
+                                }
+                                else if (timeSpan.TotalDays < 7)
+                                {
+                                    <text>@start.ToString("dddd")</text>
+                                }
+                                else
+                                {
+                                    <text>@start.ToString("M")</text>
+                                }
+                            }
+                            else if (item.Period.EndTime.HasTime)
+                            {
+                                if (timeSpan.TotalHours < 24)
+                                {
+
+                                    <div>
+                                        in @timeSpan.ToText(), for @item.Period.Duration.ToText()
+
+                                    </div>
+                                }
+                                else if (timeSpan.TotalDays < 7)
+                                {
+                                    <text>
+                                        @start.ToString("dddd"), @start.ToString("h:mm tt") - @end.ToString("h:mm tt")
+                                    </text>
+                                }
+                                else
+                                {
+                                    <text>
+                                        @start.ToString("M"), @start.ToString("h:mm tt") - @end.ToString("h:mm tt")
+                                    </text>
+                                }
+                            }
+                            else
+                            {
+                                if (timeSpan.TotalHours < 24)
+                                {
+
+                                    <text>in @timeSpan.ToText() </text>
+                                }
+                                else if (timeSpan.TotalDays < 7)
+                                {
+                                    <text>@start.ToString("dddd") at @start.ToString("h:mm tt")</text>
+                                }
+                                else
+                                {
+                                    <text>@start.ToString("M") at @start.ToString("h:mm tt")</text>
+                                }
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        }
+    </table>
+}
+else
+{
+    <div>
+        Loading...
+    </div>
+}

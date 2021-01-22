@@ -1,0 +1,71 @@
+{
+  "version": "1.0",
+  "defaultProvider": "unpkg",
+  "libraries": [
+    {
+      "library": "roboto-fontface@0.10.0",
+      "destination": "wwwroot/",
+      "files": [
+        "fonts/roboto/Roboto-Black.woff",
+        "fonts/roboto/Roboto-Black.woff2",
+        "fonts/roboto/Roboto-BlackItalic.woff",
+        "fonts/roboto/Roboto-BlackItalic.woff2",
+        "fonts/roboto/Roboto-Bold.woff",
+        "fonts/roboto/Roboto-Bold.woff2",
+        "fonts/roboto/Roboto-BoldItalic.woff",
+        "fonts/roboto/Roboto-BoldItalic.woff2",
+        "fonts/roboto/Roboto-Light.woff",
+        "fonts/roboto/Roboto-Light.woff2",
+        "fonts/roboto/Roboto-LightItalic.woff",
+        "fonts/roboto/Roboto-LightItalic.woff2",
+        "fonts/roboto/Roboto-Medium.woff",
+        "fonts/roboto/Roboto-Medium.woff2",
+        "fonts/roboto/Roboto-MediumItalic.woff",
+        "fonts/roboto/Roboto-MediumItalic.woff2",
+        "fonts/roboto/Roboto-Regular.woff",
+        "fonts/roboto/Roboto-Regular.woff2",
+        "fonts/roboto/Roboto-RegularItalic.woff",
+        "fonts/roboto/Roboto-RegularItalic.woff2",
+        "fonts/roboto/Roboto-Thin.woff",
+        "fonts/roboto/Roboto-Thin.woff2",
+        "fonts/roboto/Roboto-ThinItalic.woff",
+        "fonts/roboto/Roboto-ThinItalic.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-Bold.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-Bold.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-BoldItalic.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-BoldItalic.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-Light.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-Light.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-LightItalic.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-LightItalic.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-Regular.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-Regular.woff2",
+        "fonts/roboto-condensed/Roboto-Condensed-RegularItalic.woff",
+        "fonts/roboto-condensed/Roboto-Condensed-RegularItalic.woff2",
+        "fonts/roboto-slab/Roboto-Slab-Bold.woff",
+        "fonts/roboto-slab/Roboto-Slab-Bold.woff2",
+        "fonts/roboto-slab/Roboto-Slab-Light.woff",
+        "fonts/roboto-slab/Roboto-Slab-Light.woff2",
+        "fonts/roboto-slab/Roboto-Slab-Regular.woff",
+        "fonts/roboto-slab/Roboto-Slab-Regular.woff2",
+        "fonts/roboto-slab/Roboto-Slab-Thin.woff",
+        "fonts/roboto-slab/Roboto-Slab-Thin.woff2"
+      ]
+    },
+    {
+      "library": "weathericons@2.1.0",
+      "destination": "wwwroot/lib/weathericons/",
+      "files": [
+        "css/weather-icons-wind.css",
+        "css/weather-icons-wind.min.css",
+        "css/weather-icons.css",
+        "css/weather-icons.min.css",
+        "font/weathericons-regular-webfont.eot",
+        "font/weathericons-regular-webfont.svg",
+        "font/weathericons-regular-webfont.ttf",
+        "font/weathericons-regular-webfont.woff",
+        "font/weathericons-regular-webfont.woff2"
+      ]
+    }
+  ]
+}

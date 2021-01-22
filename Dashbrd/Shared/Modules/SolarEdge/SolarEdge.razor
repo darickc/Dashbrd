@@ -1,0 +1,12 @@
+@using ChartJs.Blazor.LineChart
+
+<div class="chart">
+    @if (Type == SolarEdgeType.Energy)
+    {
+        <Chart Config="BarConfig" Width="400" Height="300"></Chart>
+    }
+    else
+    {
+        <Chart Config="LineConfig" Width="400" Height="300"></Chart>
+    }
+</div>

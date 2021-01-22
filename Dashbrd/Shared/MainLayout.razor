@@ -1,0 +1,41 @@
+@inherits LayoutComponentBase
+@*@Body*@
+@*<div class="region fullscreen below"><div class="container">
+    <BackgroundImageSlideshow></BackgroundImageSlideshow>
+</div></div>
+<div class="region top bar">
+    <div class="container"></div>
+    <div class="region top left"><div class="container">
+        <Calendar></Calendar>
+    </div></div>
+    <div class="region top center">
+        <div class="container">
+            <Clock></Clock>
+        </div>
+    </div>
+    <div class="region top right"><div class="container"><Weather></Weather></div></div>
+</div>
+<div class="region upper third"><div class="container"></div></div>
+<div class="region middle center"><div class="container"></div></div>
+<div class="region lower third"><div class="container"><br /></div></div>
+<div class="region bottom bar">
+    <div class="container"></div>
+    <div class="region bottom left"><div class="container">
+        <SolarEdge Type="SolarEdgeType.Power"></SolarEdge>
+    </div></div>
+    <div class="region bottom center"><div class="container"></div></div>
+    <div class="region bottom right"><div class="container">
+    <SolarEdge Type="SolarEdgeType.Energy"></SolarEdge>
+</div></div>
+</div>
+<div class="region fullscreen above"><div class="container"></div></div>*@
+
+<Layout>
+    <FullscreenBelow><BackgroundImageSlideshow></BackgroundImageSlideshow></FullscreenBelow>
+    <TopLeft><Calendar></Calendar></TopLeft>
+    <TopCenter><Clock></Clock></TopCenter>
+    <TopRight><Weather></Weather></TopRight>
+    <BottomLeft><SolarEdge Type="SolarEdgeType.Power"></SolarEdge></BottomLeft>
+    <BottomRight><SolarEdge Type="SolarEdgeType.Energy"></SolarEdge></BottomRight>
+</Layout>
+

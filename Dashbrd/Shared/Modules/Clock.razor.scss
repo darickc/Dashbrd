@@ -1,0 +1,18 @@
+.clock {
+    display: grid;
+    justify-items: center;
+    align-items: start;
+
+    .date {
+    }
+
+    .time {
+        font-size: 2em;
+
+        .seconds {
+            font-size: .75em;
+            position:relative;
+            bottom:.25em;
+        }
+    }
+}

@@ -1,0 +1,11 @@
+<div class="clock">
+    <div class="date">
+        @DateTime.ToString("dddd, MMMM dd, yyyy")
+    </div>
+    <div class="time">
+        @DateTime.ToString("h:mm")
+        <span class="seconds">@DateTime.ToString("ss")</span>
+        @DateTime.ToString("tt")
+    </div>
+</div>
+
