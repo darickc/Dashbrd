@@ -1,0 +1,53 @@
+﻿@if (Connected)
+{
+	<div class="gauges">
+		<div>Temp: @Temp&#176;</div>
+		<div>Door: @DoorState</div>
+		<div>
+			<RadzenRadialGauge Style="width: 100%; height: 100%;">
+				<RadzenRadialGaugeScale StartAngle="-150" EndAngle="150" Step="10" Min="0" Max="100" TickPosition="GaugeTickPosition.Inside">
+					<RadzenRadialGaugeScalePointer Value=@WaterLevel Length="0.6" ShowValue="true">
+						<Template Context="pointer">
+							<h4>
+								@pointer.Value <sup>%</sup>
+							</h4>
+						</Template>
+					</RadzenRadialGaugeScalePointer>
+					<RadzenRadialGaugeScaleRange From="20" To="100" Fill="green" />
+					<RadzenRadialGaugeScaleRange From="10" To="20" Fill="orange" />
+					<RadzenRadialGaugeScaleRange From="0" To="10" Fill="red" />
+				</RadzenRadialGaugeScale>
+			</RadzenRadialGauge>
+			<div class="gague-text">Water @WaterTemp&#176;
+				@if (WaterHeaterState == true)
+				{
+					<span class="wi weathericon wi-fire" style="margin-left:5px;"></span>
+				}
+			</div>
+		</div>
+		<div>
+			<RadzenRadialGauge Style="width: 100%; height: 100%;">
+				<RadzenRadialGaugeScale StartAngle="-150" EndAngle="150" Step="10" Min="0" Max="100" TickPosition="GaugeTickPosition.Inside">
+					<RadzenRadialGaugeScalePointer Value=@FoodLevel Length="0.6" ShowValue="true">
+						<Template Context="pointer">
+							<h4>
+								@pointer.Value <sup>%</sup>
+							</h4>
+						</Template>
+					</RadzenRadialGaugeScalePointer>
+					<RadzenRadialGaugeScaleRange From="20" To="100" Fill="green" />
+					<RadzenRadialGaugeScaleRange From="10" To="20" Fill="orange" />
+					<RadzenRadialGaugeScaleRange From="0" To="10" Fill="red" />
+				</RadzenRadialGaugeScale>
+			</RadzenRadialGauge>
+			<div class="gague-text">Food</div>
+		</div>
+	</div>
+	
+}
+else
+{
+	<div>Not Connected</div>
+}
+
+

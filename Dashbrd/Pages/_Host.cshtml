@@ -12,6 +12,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashbrd</title>
     <base href="~/" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default-base.css">
     <link href="css/site.css" rel="stylesheet" />
     <link href="_content/Dashbrd.Shared/css/roboto.css" rel="stylesheet" />
     <link href="_content/Dashbrd.Shared/lib/weathericons/css/weather-icons.min.css" rel="stylesheet" />
@@ -36,6 +37,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
 <!-- This is the glue between Blazor and Chart.js -->
 <script src="_content/ChartJs.Blazor.Fork/ChartJsBlazorInterop.js"></script>
+<script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
 <script>
     Blazor.defaultReconnectionHandler._reconnectCallback = function (d) {
         document.location.reload();

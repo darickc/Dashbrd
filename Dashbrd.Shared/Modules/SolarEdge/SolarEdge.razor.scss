@@ -1,3 +1,6 @@
 .chart{
     display:inline-block;
 }
+::deep .chartjs-render-monitor{
+    display:inline !important;
+}
