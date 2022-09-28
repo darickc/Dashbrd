@@ -2,12 +2,17 @@
 @*@Body*@
 
 <Layout>
-    <FullscreenBelow><BackgroundImageSlideshow></BackgroundImageSlideshow></FullscreenBelow>
+    <FullscreenBelow>
+        <BackgroundImageSlideshow></BackgroundImageSlideshow>
+    </FullscreenBelow>
     <TopLeft><Calendar></Calendar></TopLeft>
     <TopCenter><Clock></Clock></TopCenter>
     <TopRight><Weather></Weather></TopRight>
     <BottomLeft><SolarEdge Type="SolarEdgeType.Power"></SolarEdge></BottomLeft>
-    <BottomCenter><Coop></Coop></BottomCenter>
+    <BottomCenter>
+        <Jellyfin></Jellyfin>
+        @*<Coop></Coop>*@
+    </BottomCenter>
     <BottomRight><SolarEdge Type="SolarEdgeType.Energy"></SolarEdge></BottomRight>
 </Layout>
 

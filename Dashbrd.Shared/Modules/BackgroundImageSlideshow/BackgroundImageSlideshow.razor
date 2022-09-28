@@ -20,16 +20,19 @@
 </div>
 <div class="gradient"></div>
 <div class="progress">
-    @if (Image1?.Show == true)
+    @if (_playSlideshow)
     {
-        <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
-    }
-    @if (Image2?.Show == true)
-    {
-        <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
-    }
-    @if (Image3?.Show == true)
-    {
-        <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        @if (Image1?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
+        @if (Image2?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
+        @if (Image3?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
     }
 </div>

@@ -1,0 +1,33 @@
+﻿<div class="jellyfin">
+    @if (NotificationData != null)
+    {
+        <div>
+            @if (string.IsNullOrEmpty(NotificationData.Logo))
+            {
+                <div>
+                    @NotificationData.Name
+                </div>
+            }
+            else
+            {
+                <div>
+                    <img src="@NotificationData.Logo" style="max-height: 150px;"/>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(NotificationData.SeriesName))
+            {
+                <div>
+                    Season @NotificationData.SeasonNumber - @NotificationData.EpisodeNumber. @NotificationData.Name
+                </div>
+            }
+            
+            <div class="progress">
+                @NotificationData.Position.ToText()
+                <RadzenProgressBar @bind-Value="@NotificationData.PlaybackPosition" Max="NotificationData.RunTime" Style="height:7px;" ProgressBarStyle="ProgressBarStyle.Light" ShowValue="false" />
+                @NotificationData.RunTimeSpan.ToText()
+            </div>
+        </div>
+    }
+</div>
+
+

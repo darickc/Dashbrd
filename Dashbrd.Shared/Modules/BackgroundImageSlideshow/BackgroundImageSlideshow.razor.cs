@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using CSharpFunctionalExtensions;
+using Dashbrd.Shared.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 
@@ -26,19 +27,20 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
             "flipY"
         };
 
-        private string _transitionTimingFunction = "cubic-bezier(.17,.67,.35,.96)";
-        private string[] _animations = {"slide", "zoomOut", "zoomIn"};
+        private readonly string _transitionTimingFunction = "cubic-bezier(.17,.67,.35,.96)";
+        private readonly string[] _animations = {"slide", "zoomOut", "zoomIn"};
         private string _transiationSpeed = "2s";
-        private string _backgroundAnimationDuration = "3s";
-        private string _backgroudSize = "contain";
-        private string _backgroundPosition = "center";
+        private readonly string _backgroundAnimationDuration = "3s";
+        private readonly string _backgroudSize = "contain";
+        private readonly string _backgroundPosition = "center";
         private string[] _fileExtensions = { "jpg","jpeg","bmp","gif","png" };
 
-        private Random _random = new();
+        private readonly Random _random = new();
 
         [Inject] private IConfiguration Configuration { get; set; }
+        [Inject] private MessageService MessageService { get; set; }
 
-        private List<string> _imageFiles = new();
+        private readonly List<string> _imageFiles = new();
         public ImageData Image1 { get; set; }
         public ImageData Image2 { get; set; }
         public ImageData Image3 { get; set; }
@@ -49,6 +51,7 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
         public string[] FileExtensions { get; set; }
         public string[] ImagePaths { get; set; }
 
+        private bool _playSlideshow = true;
         private int _index = 0;
         private Timer _timer;
         private int _tick;
@@ -56,6 +59,8 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
         {
             // await Task.Delay(2000);
             Configuration.GetSection("Settings:BackgroundSlideShow").Bind(this);
+            MessageService.OnMessage += MessageService_OnMessage;
+
             var timespan = TimeSpan.FromSeconds(SlideShowSpeed);
             SlideShowSpeed = timespan.TotalMilliseconds;
             timespan = TimeSpan.FromSeconds(TransitionSpeed);
@@ -87,9 +92,29 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
             }
         }
 
+        private async void MessageService_OnMessage(object obj)
+        {
+            if (obj is BackgroundImageSlideshowMesage message)
+            {
+                if (message.DisplayImage)
+                {
+                    _timer.Stop();
+                    _playSlideshow = false;
+                    await UpdateImage(message.Image);
+                    await UpdateImage();
+                }
+                else
+                {
+                    _playSlideshow = true;
+                    await UpdateImage();
+                    //_timer.Start();
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            
             if (_imageFiles.Count > 0)
             {
                 if (firstRender)
@@ -99,7 +124,11 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
                     await LoadNextImage().Tap(image => Image2 = image);
                     await InvokeAsync(StateHasChanged);
                 }
-                _timer.Start();
+
+                if (_playSlideshow)
+                {
+                    _timer.Start();
+                }
             }
         }
 
@@ -108,7 +137,7 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
             await UpdateImage();
         }
 
-        private async Task UpdateImage()
+        private async Task UpdateImage(string nextImage = null)
         {
             var mod = _tick % 3;
             switch (mod)
@@ -116,19 +145,19 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
                 case 0:
                     Image1.Show = false;
                     Image2.Show = true;
-                    await LoadNextImage().Tap(image => Image3 = image);
+                    await LoadNextImage(nextImage).Tap(image => Image3 = image);
                     _tick++;
                     break;
                 case 1:
                     Image2.Show = false;
                     Image3.Show = true;
-                    await LoadNextImage().Tap(image => Image1 = image);
+                    await LoadNextImage(nextImage).Tap(image => Image1 = image);
                     _tick++;
                     break;
                 case 2:
                     Image3.Show = false;
                     Image1.Show = true;
-                    await LoadNextImage().Tap(image => Image2 = image);
+                    await LoadNextImage(nextImage).Tap(image => Image2 = image);
                     _tick = 0;
                     break;
             }
@@ -136,11 +165,16 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
             await InvokeAsync(StateHasChanged);
         }
 
-        private async Task<Result<ImageData>> LoadNextImage()
+        private async Task<Result<ImageData>> LoadNextImage(string nextImage = null)
         {
-            return await GetImageData(_imageFiles[_index++])
+            return await Result.Success(nextImage)
+                .Ensure(image => !string.IsNullOrEmpty(image), "Invalid image")
+                .OnFailureCompensate(_=> GetImageData(_imageFiles[_index++]))
                 .TapIf(data => _index >= _imageFiles.Count, data => _index = 0)
-                .Map(CreateImage);
+                .Map(CreateImage); ;
+            // return await GetImageData(_imageFiles[_index++])
+            //     .TapIf(data => _index >= _imageFiles.Count, data => _index = 0)
+            //     .Map(CreateImage);
         }
 
         private async Task<Result<string>> GetImageData(string fileLocation)

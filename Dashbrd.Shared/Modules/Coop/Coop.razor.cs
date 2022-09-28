@@ -2,14 +2,11 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using MQTTnet.Client.Options;
+using MQTTnet.Client;
 using MQTTnet.Extensions.ManagedClient;
 
 namespace Dashbrd.Shared.Modules.Coop
@@ -75,30 +72,30 @@ namespace Dashbrd.Shared.Modules.Coop
                 .Build();
 
             _client = new MqttFactory().CreateManagedMqttClient();
-            _client.UseApplicationMessageReceivedHandler(Handler);
-            _client.UseConnectedHandler(async e =>
-            {
-                await InvokeAsync(async () =>
-                {
-                    Connected = true;
-                    Logger.LogInformation("Connected successfully with MQTT Brokers.");
-                    await _client.SubscribeAsync(new MqttTopicFilterBuilder()
-                        .WithTopic($"{MqttBaseTopic}/#")
-                        .WithAtLeastOnceQoS()
-                        .Build());
-                    StateHasChanged();
-                });
-            });
-
-            _client.UseDisconnectedHandler(async e =>
-            {
-                await InvokeAsync(() =>
-                {
-                    Logger.LogInformation($"Disconnected from MQTT Brokers: {e.Reason}, {e.Exception?.Message}");
-                    Connected = false;
-                    StateHasChanged();
-                });
-            });
+            // _client.UseApplicationMessageReceivedHandler(Handler);
+            // _client.UseConnectedHandler(async e =>
+            // {
+            //     await InvokeAsync(async () =>
+            //     {
+            //         Connected = true;
+            //         Logger.LogInformation("Connected successfully with MQTT Brokers.");
+            //         await _client.SubscribeAsync(new MqttTopicFilterBuilder()
+            //             .WithTopic($"{MqttBaseTopic}/#")
+            //             .WithAtLeastOnceQoS()
+            //             .Build());
+            //         StateHasChanged();
+            //     });
+            // });
+            //
+            // _client.UseDisconnectedHandler(async e =>
+            // {
+            //     await InvokeAsync(() =>
+            //     {
+            //         Logger.LogInformation($"Disconnected from MQTT Brokers: {e.Reason}, {e.Exception?.Message}");
+            //         Connected = false;
+            //         StateHasChanged();
+            //     });
+            // });
 
             await _client.StartAsync(managedOptions);
         }
