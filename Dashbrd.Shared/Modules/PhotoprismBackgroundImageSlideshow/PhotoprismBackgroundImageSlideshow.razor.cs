@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 using CSharpFunctionalExtensions;
 using Dashbrd.Shared.Common;
-using Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 
-namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
+namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 {
-    public partial class BackgroundImageSlideshow
+    public partial class PhotoprismBackgroundImageSlideshow
     {
         private string[] _transitions = new[] {
             "opacity",
@@ -29,17 +30,17 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
         };
 
         private readonly string _transitionTimingFunction = "cubic-bezier(.17,.67,.35,.96)";
-        private readonly string[] _animations = {"slide", "zoomOut", "zoomIn"};
+        private readonly string[] _animations = { "slide", "zoomOut", "zoomIn" };
         private string _transiationSpeed = "2s";
         private readonly string _backgroundAnimationDuration = "3s";
         private readonly string _backgroudSize = "contain";
         private readonly string _backgroundPosition = "center";
-        private string[] _fileExtensions = { "jpg","jpeg","bmp","gif","png" };
 
         private readonly Random _random = new();
 
         [Inject] private IConfiguration Configuration { get; set; }
         [Inject] private MessageService MessageService { get; set; }
+        [Inject] public IHttpClientFactory HttpClientFactory { get; set; }
 
         private readonly List<string> _imageFiles = new();
         public ImageData Image1 { get; set; }
@@ -49,17 +50,17 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
         public double SlideShowSpeed { get; set; } = 10;
         public double TransitionSpeed { get; set; } = 2;
         public string[] Transitions { get; set; }
-        public string[] FileExtensions { get; set; }
-        public string[] ImagePaths { get; set; }
+        public string PhotoprismApiUrl { get; set; }
+        public string ApiToken { get; set; }
 
         private bool _playSlideshow = true;
         private int _index = 0;
         private Timer _timer;
         private int _tick;
-        protected override void OnInitialized()
+
+        protected override async Task OnInitializedAsync()
         {
-            // await Task.Delay(2000);
-            Configuration.GetSection("Settings:BackgroundSlideShow").Bind(this);
+            Configuration.GetSection("Settings:PhotoprismBackgroundImageSlideshow").Bind(this);
             MessageService.OnMessage += MessageService_OnMessage;
 
             var timespan = TimeSpan.FromSeconds(SlideShowSpeed);
@@ -71,26 +72,26 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
                 _transitions = Transitions;
             }
 
-            if (FileExtensions?.Length > 0)
-            {
-                _fileExtensions = FileExtensions;
-            }
 
-            if (ImagePaths?.Any() == true)
+            await base.OnInitializedAsync();
+        }
+
+        private async Task<Result> GetImagesToDisplay()
+        {
+            return await Result.Try(async () =>
             {
-                foreach (var imagePath in ImagePaths)
+                var httpClient = HttpClientFactory.CreateClient();
+                httpClient.DefaultRequestHeaders.Add("X-Session-ID", ApiToken);
+                var options = new JsonSerializerOptions
                 {
-                    foreach (var fileExtension in _fileExtensions)
-                    {
-                        _imageFiles.AddRange(Directory.GetFiles(imagePath, $"*.{fileExtension}", SearchOption.AllDirectories));
-                    }
-                }
+                    PropertyNameCaseInsensitive = true
+                };
 
+                var images = await httpClient.GetFromJsonAsync<List<PhotoprismImage>>($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites", options);
+                _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
                 Shuffle(_imageFiles);
-                _timer = new Timer(SlideShowSpeed);
-                _timer.Elapsed += Timer_Elapsed;
-                _timer.AutoReset = false;
-            }
+                _index = 0;
+            });
         }
 
         private async void MessageService_OnMessage(object obj)
@@ -108,7 +109,7 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
                 {
                     _playSlideshow = true;
                     await UpdateImage();
-                    //_timer.Start();
+                    _timer.Start();
                 }
                 await InvokeAsync(StateHasChanged);
             }
@@ -116,16 +117,24 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            if (_imageFiles.Count > 0)
+
+            if (firstRender)
             {
-                if (firstRender)
+                await GetImagesToDisplay();
+                if (_imageFiles.Any())
                 {
+                    
+                    _timer = new Timer(SlideShowSpeed);
+                    _timer.Elapsed += Timer_Elapsed;
+                    _timer.AutoReset = false;
                     await Task.Delay(2000);
                     await LoadNextImage().Tap(image => Image1 = image).Tap(image => image.Show = true);
                     await LoadNextImage().Tap(image => Image2 = image);
-                    await InvokeAsync(StateHasChanged);
                 }
-
+                await InvokeAsync(StateHasChanged);
+            }
+            if (_imageFiles.Count > 0)
+            {
                 if (_playSlideshow)
                 {
                     _timer.Start();
@@ -135,11 +144,15 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
 
         private async void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            _timer.Stop();
             await UpdateImage();
+            if(_playSlideshow)
+                _timer.Start();
         }
 
         private async Task UpdateImage(string nextImage = null)
         {
+
             var mod = _tick % 3;
             switch (mod)
             {
@@ -162,7 +175,7 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
                     _tick = 0;
                     break;
             }
-            
+
             await InvokeAsync(StateHasChanged);
         }
 
@@ -170,21 +183,31 @@ namespace Dashbrd.Shared.Modules.BackgroundImageSlideshow
         {
             return await Result.Success(nextImage)
                 .Ensure(image => !string.IsNullOrEmpty(image), "Invalid image")
-                .OnFailureCompensate(_=> GetImageData(_imageFiles[_index++]))
-                .TapIf(data => _index >= _imageFiles.Count, data => _index = 0)
-                .Map(CreateImage); ;
-            // return await GetImageData(_imageFiles[_index++])
-            //     .TapIf(data => _index >= _imageFiles.Count, data => _index = 0)
-            //     .Map(CreateImage);
+                .OnFailureCompensate(_ => GetImageData(_imageFiles[_index++]))
+                .CheckIf(_ => _index >= _imageFiles.Count, _=> GetImagesToDisplay())
+                .Map(CreateImage);
         }
 
         private async Task<Result<string>> GetImageData(string fileLocation)
         {
             return await Result.Try(async () =>
             {
-                var fileInfo = new FileInfo(fileLocation);
-                var data = await File.ReadAllBytesAsync(fileLocation);
-                return $"data:image/{fileInfo.Extension};base64,{Convert.ToBase64String(data)}";
+                var httpClient = HttpClientFactory.CreateClient();
+                //httpClient.DefaultRequestHeaders.Add("X-Download-Token", _downloadToken);
+                var httpResponseMessage = await httpClient.GetAsync($"{PhotoprismApiUrl}{fileLocation}");
+
+                if (httpResponseMessage.IsSuccessStatusCode)
+                {
+                    var data = await httpResponseMessage.Content.ReadAsByteArrayAsync();
+                    var contentType = "";
+                    if (httpResponseMessage.Content.Headers.TryGetValues("Content-Type", out var values))
+                    {
+                        contentType = values.FirstOrDefault();
+                    }
+                    return $"data:{contentType};base64,{Convert.ToBase64String(data)}";
+                }
+
+                return "";
             });
         }
 

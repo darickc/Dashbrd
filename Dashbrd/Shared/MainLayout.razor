@@ -1,18 +1,23 @@
+
 @inherits LayoutComponentBase
 @*@Body*@
 
 <Layout>
     <FullscreenBelow>
-        <BackgroundImageSlideshow></BackgroundImageSlideshow>
+        <PhotoprismBackgroundImageSlideshow></PhotoprismBackgroundImageSlideshow>
     </FullscreenBelow>
     <TopLeft><Calendar></Calendar></TopLeft>
     <TopCenter><Clock></Clock></TopCenter>
     <TopRight><Weather></Weather></TopRight>
-    <BottomLeft><SolarEdge Type="SolarEdgeType.Power"></SolarEdge></BottomLeft>
+    <BottomLeft>
+        @* <SolarEdge Type="SolarEdgeType.Power"></SolarEdge> *@
+    </BottomLeft>
     <BottomCenter>
         <Jellyfin></Jellyfin>
         @*<Coop></Coop>*@
     </BottomCenter>
-    <BottomRight><SolarEdge Type="SolarEdgeType.Energy"></SolarEdge></BottomRight>
+    <BottomRight>
+        @* <SolarEdge Type="SolarEdgeType.Energy"></SolarEdge> *@
+    </BottomRight>
 </Layout>
 

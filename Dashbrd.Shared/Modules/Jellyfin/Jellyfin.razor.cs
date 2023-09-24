@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using Dashbrd.Shared.Modules.BackgroundImageSlideshow;
 using System.Net.Http.Json;
+using Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow;
 
 namespace Dashbrd.Shared.Modules.Jellyfin
 {
@@ -132,7 +133,7 @@ namespace Dashbrd.Shared.Modules.Jellyfin
         private Task OnPlaybackStop(JellyfinNotificationData arg)
         {
             NotificationData = null;
-            MessageService.SendMessage(new BackgroundImageSlideshowMesage
+            MessageService.SendMessage(new PhotoprismBackgroundImageSlideshowMesage
             {
                 DisplayImage = false
             });
@@ -148,7 +149,7 @@ namespace Dashbrd.Shared.Modules.Jellyfin
                 .Tap(message=> MessageService.SendMessage(message));
         }
 
-        private async Task<Result<BackgroundImageSlideshowMesage>> GetBackdropImage(JellyfinNotificationData d)
+        private async Task<Result<PhotoprismBackgroundImageSlideshowMesage>> GetBackdropImage(JellyfinNotificationData d)
         {
             return await Result.Try(async () =>
             {
@@ -157,7 +158,7 @@ namespace Dashbrd.Shared.Modules.Jellyfin
                 response.EnsureSuccessStatusCode();
                 var type = response.Content.Headers.ContentType;
                 var data = await response.Content.ReadAsByteArrayAsync();
-                return new BackgroundImageSlideshowMesage
+                return new PhotoprismBackgroundImageSlideshowMesage
                 {
                     DisplayImage = true,
                     Image = $"data:{type};base64,{Convert.ToBase64String(data)}"

@@ -1,0 +1,38 @@
+<div class="images">
+    @if (Image1 != null)
+    {
+        <div class="transition @(Image1.Show ? Image1.Transition : "hideImage")" style="@Image1.TransitionStyle">
+            <div class="image @Image1.Animation" style="@Image1.Style"></div>
+        </div>
+    }
+    @if (Image2 != null)
+    {
+        <div class="transition @(Image2.Show ? Image2.Transition : "hideImage")" style="@Image2.TransitionStyle">
+            <div class="image @Image2.Animation" style="@Image2.Style"></div>
+        </div>
+    }
+    @if (Image3 != null)
+    {
+        <div class="transition @(Image3.Show ? Image3.Transition : "hideImage")" style="@Image3.TransitionStyle">
+            <div class="image @Image3.Animation" style="@Image3.Style"></div>
+        </div>
+    }
+</div>
+<div class="gradient"></div>
+<div class="progress">
+    @if (_playSlideshow)
+    {
+        @if (Image1?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
+        @if (Image2?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
+        @if (Image3?.Show == true)
+        {
+            <div class="progress-inner" style="animation-duration: @($"{SlideShowSpeed}ms");"></div>
+        }
+    }
+</div>
