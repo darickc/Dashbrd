@@ -94,7 +94,7 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
                 _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
                 Shuffle(_imageFiles);
                 _index = 0;
-            });
+            }).TapError(e => Logger.LogError(e));
         }
 
         private async void MessageService_OnMessage(object obj)
@@ -211,7 +211,7 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
                 }
 
                 return "";
-            });
+            }).TapError(e => Logger.LogError(e));
         }
 
         private string GetTransition()
