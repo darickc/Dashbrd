@@ -7,6 +7,7 @@ namespace Dashbrd
 {
     public class Program
     {
+        private const string DockerSecretPath = "/run/secrets";
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
@@ -17,6 +18,13 @@ namespace Dashbrd
                 .ConfigureAppConfiguration((context, builder) =>
                 {
                     builder.AddJsonFile("secrets.json", true);
+                    if (Directory.Exists(DockerSecretPath))
+                    {
+                        foreach (var file in Directory.GetFiles(DockerSecretPath))
+                        {
+                            builder.AddJsonFile(file, true);
+                        }
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

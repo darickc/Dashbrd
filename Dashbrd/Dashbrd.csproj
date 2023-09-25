@@ -3,10 +3,12 @@
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <UserSecretsId>Dashbrd</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Fusonic.Ical.Net" Version="5.0.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.4" />
   </ItemGroup>
 
   <ItemGroup>
