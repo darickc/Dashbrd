@@ -10,6 +10,7 @@ using CSharpFunctionalExtensions;
 using Dashbrd.Shared.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 {
@@ -41,6 +42,7 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
         [Inject] private IConfiguration Configuration { get; set; }
         [Inject] private MessageService MessageService { get; set; }
         [Inject] public IHttpClientFactory HttpClientFactory { get; set; }
+        [Inject] public ILogger<PhotoprismBackgroundImageSlideshow> Logger { get; set; }
 
         private readonly List<string> _imageFiles = new();
         public ImageData Image1 { get; set; }
@@ -88,6 +90,7 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
                 };
 
                 var images = await httpClient.GetFromJsonAsync<List<PhotoprismImage>>($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites", options);
+                Logger.LogInformation($"Received {images.Count} images from photoprism");
                 _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
                 Shuffle(_imageFiles);
                 _index = 0;
