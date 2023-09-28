@@ -9,6 +9,7 @@ using Ical.Net;
 using Ical.Net.DataTypes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Dashbrd.Shared.Modules.Calendar
 {
@@ -17,6 +18,7 @@ namespace Dashbrd.Shared.Modules.Calendar
         [Inject]
         public IHttpClientFactory ClientFactory { get; set; }
         [Inject] private IConfiguration Configuration { get; set; }
+        [Inject] private ILogger<Calendar> Logger { get; set; }
         private Timer _timer;
 
         public int UpdateInterval { get; set; } = 15;
@@ -42,16 +44,22 @@ namespace Dashbrd.Shared.Modules.Calendar
 
         private async Task GetCalendars()
         {
-            var client = ClientFactory.CreateClient();
-            var sb = new StringBuilder();
-            foreach (var url in Urls)
+            try
             {
-                var text = await client.GetStringAsync(url);
-                sb.AppendLine(text);
+                var client = ClientFactory.CreateClient();
+                var sb = new StringBuilder();
+                foreach (var url in Urls)
+                {
+                    var text = await client.GetStringAsync(url);
+                    sb.AppendLine(text);
+                }
+                var calendar = CalendarCollection.Load(sb.ToString());
+                Events = calendar.GetOccurrences(DateTime.Now, DateTime.Now.AddMonths(2)).OrderBy(o=>o.Period.StartTime).Take(5).ToList();
             }
-            var calendar = CalendarCollection.Load(sb.ToString());
-            Events = calendar.GetOccurrences(DateTime.Now, DateTime.Now.AddMonths(2)).OrderBy(o=>o.Period.StartTime).Take(5).ToList();
-            
+            catch (Exception e)
+            {
+                Logger.LogError(e,e.Message);
+            }
         }
     }
 }
