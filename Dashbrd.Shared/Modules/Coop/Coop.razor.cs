@@ -62,7 +62,10 @@ namespace Dashbrd.Shared.Modules.Coop
             }
             if (MqttSecure)
             {
-                messageBuilder.WithTls();
+                messageBuilder.WithTlsOptions(builder =>
+                {
+                    builder.UseTls();
+                });
             }
             var options = messageBuilder.Build();
 
@@ -117,7 +120,7 @@ namespace Dashbrd.Shared.Modules.Coop
             {
                 await InvokeAsync(() =>
                 {
-                    e.ApplicationMessage.Payload.Decode().Tap(action.Invoke);
+                    e.ApplicationMessage.PayloadSegment.DecodeData().Tap(action.Invoke);
                     StateHasChanged();
                 });
             }

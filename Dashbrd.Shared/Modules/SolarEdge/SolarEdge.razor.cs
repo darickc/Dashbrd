@@ -14,17 +14,23 @@ using ChartJs.Blazor.Common.Enums;
 using ChartJs.Blazor.LineChart;
 using ChartJs.Blazor.Util;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+
 
 namespace Dashbrd.Shared.Modules.SolarEdge
 {
     public partial class SolarEdge
     {
         private const string BaseUrl = "https://monitoringapi.solaredge.com/site/";
+        private const string Power = "SolarEdgePower";
+        private const string Energy = "SolarEdgeEnergy";
         private Timer _timer;
+
 
         [Inject] private IConfiguration Configuration { get; set; }
         [Inject] public IHttpClientFactory HttpClientFactory { get; set; }
+        [Inject] public IMemoryCache MemoryCache { get; set; }
 
         [Parameter]
         public SolarEdgeType Type { get; set; }
@@ -156,9 +162,19 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                 }
                 else
                 {
-                    var client = HttpClientFactory.CreateClient();
-                    var data = await client.GetFromJsonAsync<Solar>(url);
-                    power = data.Power;
+                    if (MemoryCache.TryGetValue(Power, out SolarData cacheData))
+                    {
+                        power = cacheData;
+                    }
+                    else
+                    {
+                        var client = HttpClientFactory.CreateClient();
+                        var data = await client.GetFromJsonAsync<Solar>(url);
+                        power = data.Power;
+
+                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(25));
+                        MemoryCache.Set(Power, power, cacheEntryOptions);
+                    }
                 }
 
                 var total = power.Values.Sum(v => v.Value) / 4 / 1000;
@@ -177,7 +193,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                 LineConfig.Data.Datasets.Clear();
                 LineConfig.Data.Datasets.Add(dataset);
             }
-            catch (Exception e)
+            catch
             {
             }
         }
@@ -196,9 +212,19 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                 }
                 else
                 {
-                    var client = HttpClientFactory.CreateClient();
-                    var data = await client.GetFromJsonAsync<Solar>(url);
-                    energy = data.Energy;
+                    if (MemoryCache.TryGetValue(Energy, out SolarData cacheData))
+                    {
+                        energy = cacheData;
+                    }
+                    else
+                    {
+                        var client = HttpClientFactory.CreateClient();
+                        var data = await client.GetFromJsonAsync<Solar>(url);
+                        energy = data.Energy;
+
+                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(25));
+                        MemoryCache.Set(Energy, energy, cacheEntryOptions);
+                    }
                 }
 
                 var total = energy.Values.Sum(v => v.Value) / 1000;
@@ -217,7 +243,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                 BarConfig.Data.Datasets.Clear();
                 BarConfig.Data.Datasets.Add(dataset);
             }
-            catch (Exception e)
+            catch
             {
             }
         }

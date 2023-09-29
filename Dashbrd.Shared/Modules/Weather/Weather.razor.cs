@@ -77,7 +77,7 @@ namespace Dashbrd.Shared.Modules.Weather
                     var client = HttpClientFactory.CreateClient();
 				    WeatherInfo = await client.GetFromJsonAsync<WeatherInfo>(url);
                 }
-                catch (Exception e)
+                catch
                 {
                 }
             }

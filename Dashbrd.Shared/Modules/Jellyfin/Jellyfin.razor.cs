@@ -66,7 +66,10 @@ namespace Dashbrd.Shared.Modules.Jellyfin
             }
             if (MqttSecure)
             {
-                messageBuilder.WithTls();
+                messageBuilder.WithTlsOptions(builder =>
+                {
+                    builder.UseTls();
+                });
             }
             var options = messageBuilder.Build();
 
@@ -105,7 +108,7 @@ namespace Dashbrd.Shared.Modules.Jellyfin
             {
                 await InvokeAsync(async () =>
                 {
-                   await arg.ApplicationMessage.Payload.Decode()
+                   await arg.ApplicationMessage.PayloadSegment.DecodeData()
                         .Map(JsonConvert.DeserializeObject<JellyfinNotificationData>)
                         .Tap(action.Invoke);
                     StateHasChanged();
@@ -168,7 +171,6 @@ namespace Dashbrd.Shared.Modules.Jellyfin
 
         private async Task<Result> GetAncestors(JellyfinNotificationData d)
         {
-            string error;
             return await Result.Try(async () =>
             {
                 using var client = HttpClientFactory.CreateClient();
@@ -176,8 +178,7 @@ namespace Dashbrd.Shared.Modules.Jellyfin
                 var items = await client.GetFromJsonAsync<Item[]>($"{d.Server}/Items/{d.ItemId}/Ancestors");
                 var series = items?.FirstOrDefault(i => i.Type == "Series");
                 d.SeriesId = series?.Id;
-            })
-                .OnFailure(e=>error = e);
+            }).TapError(e=> Logger.LogError(e));
         }
 
         public void Dispose()
