@@ -21,6 +21,7 @@ public class JellyfinNotificationData
     public int EpisodeNumber { get; set; }
     public TimeSpan RunTimeSpan => TimeSpan.FromTicks((long)RunTime);
     public TimeSpan Position => TimeSpan.FromTicks((long)PlaybackPosition);
+    public string LogoData { get; set; }
 
     public string Thumbnail => $"{Server}/Items/{ItemId}/Images/Primary";
     public string Backdrop => $"{Server}/Items/{SeriesId ?? ItemId}/Images/Backdrop";

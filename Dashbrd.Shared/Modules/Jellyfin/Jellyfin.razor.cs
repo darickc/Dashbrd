@@ -148,8 +148,22 @@ namespace Dashbrd.Shared.Modules.Jellyfin
             await Result.Success(d)
                 .Tap(notification => NotificationData = notification)
                 .CheckIf(notification => notification.ItemType == "Episode", GetAncestors)
+                .Tap(GetLogo)
                 .Bind(GetBackdropImage)
-                .Tap(message=> MessageService.SendMessage(message));
+                .Tap(MessageService.SendMessage);
+        }
+
+        private async Task GetLogo(JellyfinNotificationData d)
+        {
+            await Result.Try(async () =>
+            {
+                using var client = HttpClientFactory.CreateClient();
+                HttpResponseMessage response = await client.GetAsync(d.Logo);
+                response.EnsureSuccessStatusCode();
+                var type = response.Content.Headers.ContentType;
+                var data = await response.Content.ReadAsByteArrayAsync();
+                d.LogoData =  $"data:{type};base64,{Convert.ToBase64String(data)}";
+            });
         }
 
         private async Task<Result<PhotoprismBackgroundImageSlideshowMesage>> GetBackdropImage(JellyfinNotificationData d)

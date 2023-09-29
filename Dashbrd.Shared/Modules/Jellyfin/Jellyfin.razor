@@ -2,7 +2,7 @@
     @if (NotificationData != null)
     {
         <div>
-            @if (string.IsNullOrEmpty(NotificationData.Logo))
+            @if (string.IsNullOrEmpty(NotificationData.LogoData))
             {
                 <div>
                     @NotificationData.Name
@@ -11,7 +11,7 @@
             else
             {
                 <div>
-                    <img src="@NotificationData.Logo" style="max-height: 150px;"/>
+                    <img src="@NotificationData.LogoData" style="max-height: 150px;" />
                 </div>
             }
             @if (!string.IsNullOrEmpty(NotificationData.SeriesName))
