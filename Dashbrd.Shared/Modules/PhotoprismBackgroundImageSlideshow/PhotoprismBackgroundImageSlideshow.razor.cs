@@ -7,10 +7,12 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions.ValueTasks;
 using Dashbrd.Shared.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Radzen.Blazor.Rendering;
 
 namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 {
@@ -88,13 +90,17 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
                 {
                     PropertyNameCaseInsensitive = true
                 };
-
+                _imageFiles.Clear();
                 var images = await httpClient.GetFromJsonAsync<List<PhotoprismImage>>($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites", options);
                 Logger.LogInformation($"Received {images.Count} images from photoprism");
                 _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
                 Shuffle(_imageFiles);
                 _index = 0;
-            }).TapError(e => Logger.LogError(e));
+            }).TapError(e =>
+            {
+                _index = -1;
+                Logger.LogError(e);
+            });
         }
 
         private async void MessageService_OnMessage(object obj)
@@ -147,10 +153,13 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 
         private async void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            _timer.Stop();
-            await UpdateImage();
-            if(_playSlideshow)
-                _timer.Start();
+            await InvokeAsync(async () =>
+            {
+                _timer.Stop();
+                await UpdateImage();
+                if(_playSlideshow)
+                    _timer.Start();
+            });
         }
 
         private async Task UpdateImage(string nextImage = null)
@@ -160,22 +169,25 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
             switch (mod)
             {
                 case 0:
-                    Image1.Show = false;
-                    Image2.Show = true;
-                    await LoadNextImage(nextImage).Tap(image => Image3 = image);
-                    _tick++;
+                    await LoadNextImage(nextImage)
+                        .Tap(_=> Image1.Show = false)
+                        .Tap(_=> Image2.Show = true)
+                        .Tap(image => Image3 = image)
+                        .Tap(_ => _tick++);
                     break;
                 case 1:
-                    Image2.Show = false;
-                    Image3.Show = true;
-                    await LoadNextImage(nextImage).Tap(image => Image1 = image);
-                    _tick++;
+                    await LoadNextImage(nextImage)
+                        .Tap(_ => Image2.Show = false)
+                        .Tap(_ => Image3.Show = true)
+                        .Tap(image => Image1 = image)
+                        .Tap(_ => _tick++);
                     break;
                 case 2:
-                    Image3.Show = false;
-                    Image1.Show = true;
-                    await LoadNextImage(nextImage).Tap(image => Image2 = image);
-                    _tick = 0;
+                    await LoadNextImage(nextImage)
+                        .Tap(_ => Image3.Show = false)
+                        .Tap(_ => Image1.Show = true)
+                        .Tap(image => Image2 = image)
+                        .Tap(_=> _tick = 0);
                     break;
             }
 
@@ -184,11 +196,24 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 
         private async Task<Result<ImageData>> LoadNextImage(string nextImage = null)
         {
-            return await Result.Success(nextImage)
-                .Ensure(image => !string.IsNullOrEmpty(image), "Invalid image")
-                .OnFailureCompensate(_ => GetImageData(_imageFiles[_index++]))
-                .CheckIf(_ => _index >= _imageFiles.Count, _=> GetImagesToDisplay())
-                .Map(CreateImage);
+            if (!string.IsNullOrEmpty(nextImage))
+            {
+                return Result.Try(() => CreateImage(nextImage));
+            }
+            else
+            {
+                return await Result.Success()
+                    .BindIf(()=> _index >= _imageFiles.Count || _imageFiles.Count == 0, GetImagesToDisplay)
+                    .Ensure(()=> _imageFiles.Count > 0, "No images")
+                    .Bind(()=> GetImageData(_imageFiles[_index++]))
+                    .Map(CreateImage);
+            }
+
+            //return await Result.Success(nextImage)
+            //    .Ensure(image => !string.IsNullOrEmpty(image), "Invalid image")
+            //    .OnFailureCompensate(_ => GetImageData(_imageFiles[_index++]))
+            //    .CheckIf(_ => _index >= _imageFiles.Count, _=> GetImagesToDisplay())
+            //    .Map(CreateImage);
         }
 
         private async Task<Result<string>> GetImageData(string fileLocation)
