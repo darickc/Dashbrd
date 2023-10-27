@@ -5,7 +5,9 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
+using Dashbrd.Shared.Modules.SolarEdge;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 
 namespace Dashbrd.Shared.Modules.Weather
@@ -13,6 +15,7 @@ namespace Dashbrd.Shared.Modules.Weather
     public partial class Weather
     {
         private const string ApiBase = "https://api.openweathermap.org/data/2.5/onecall";
+        private const string WeatherCache = "WeatherCache";
         private Timer _timer;
 
 		public Dictionary<string, string> IconTable = new()
@@ -39,6 +42,7 @@ namespace Dashbrd.Shared.Modules.Weather
 
         [Inject] private IConfiguration Configuration { get; set; }
 		[Inject] public IHttpClientFactory HttpClientFactory { get; set; }
+        [Inject] public IMemoryCache MemoryCache { get; set; }
 
         public string Latitude { get; set; }
         public string Longitude { get; set; }
@@ -71,15 +75,25 @@ namespace Dashbrd.Shared.Modules.Weather
 			}
 			else
             {
-			    var url = $"{ApiBase}?lat={Latitude}&lon={Longitude}&appid={ApiId}&units=imperial&exclude=hourly,minutely";
-                try
+                if (MemoryCache.TryGetValue(WeatherCache, out WeatherInfo weatherInfo))
                 {
-                    var client = HttpClientFactory.CreateClient();
-				    WeatherInfo = await client.GetFromJsonAsync<WeatherInfo>(url);
+					WeatherInfo = weatherInfo;
                 }
-                catch
+                else
                 {
+                    var url = $"{ApiBase}?lat={Latitude}&lon={Longitude}&appid={ApiId}&units=imperial&exclude=hourly,minutely";
+                    try
+                    {
+                        var client = HttpClientFactory.CreateClient();
+                        WeatherInfo = await client.GetFromJsonAsync<WeatherInfo>(url);
+                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval-5));
+                        MemoryCache.Set(WeatherCache, WeatherInfo, cacheEntryOptions);
+                    }
+                    catch
+                    {
+                    }
                 }
+                    
             }
         }
 

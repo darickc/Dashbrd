@@ -172,7 +172,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                         var data = await client.GetFromJsonAsync<Solar>(url);
                         power = data.Power;
 
-                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(25));
+                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval - 5));
                         MemoryCache.Set(Power, power, cacheEntryOptions);
                     }
                 }
@@ -222,7 +222,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                         var data = await client.GetFromJsonAsync<Solar>(url);
                         energy = data.Energy;
 
-                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(25));
+                        var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval-5));
                         MemoryCache.Set(Energy, energy, cacheEntryOptions);
                     }
                 }

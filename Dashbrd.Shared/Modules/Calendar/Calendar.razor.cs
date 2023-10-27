@@ -8,6 +8,7 @@ using System.Timers;
 using Ical.Net;
 using Ical.Net.DataTypes;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -15,10 +16,12 @@ namespace Dashbrd.Shared.Modules.Calendar
 {
     public partial class Calendar
     {
+        private const string CalendarCache = "CalendarCache";
         [Inject]
         public IHttpClientFactory ClientFactory { get; set; }
         [Inject] private IConfiguration Configuration { get; set; }
         [Inject] private ILogger<Calendar> Logger { get; set; }
+        [Inject] public IMemoryCache MemoryCache { get; set; }
         private Timer _timer;
 
         public int UpdateInterval { get; set; } = 15;
@@ -46,15 +49,24 @@ namespace Dashbrd.Shared.Modules.Calendar
         {
             try
             {
-                var client = ClientFactory.CreateClient();
-                var sb = new StringBuilder();
-                foreach (var url in Urls)
+                if (MemoryCache.TryGetValue(CalendarCache, out List<Occurrence> events))
                 {
-                    var text = await client.GetStringAsync(url);
-                    sb.AppendLine(text);
+                    Events = events;
                 }
-                var calendar = CalendarCollection.Load(sb.ToString());
-                Events = calendar.GetOccurrences(DateTime.Now, DateTime.Now.AddMonths(2)).OrderBy(o=>o.Period.StartTime).Take(5).ToList();
+                else
+                {
+                    var client = ClientFactory.CreateClient();
+                    var sb = new StringBuilder();
+                    foreach (var url in Urls)
+                    {
+                        var text = await client.GetStringAsync(url);
+                        sb.AppendLine(text);
+                    }
+                    var calendar = CalendarCollection.Load(sb.ToString());
+                    Events = calendar.GetOccurrences(DateTime.Now, DateTime.Now.AddMonths(2)).OrderBy(o=>o.Period.StartTime).Take(5).ToList();
+                    var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval - 5));
+                    MemoryCache.Set(CalendarCache, Events, cacheEntryOptions);
+                }
             }
             catch (Exception e)
             {
