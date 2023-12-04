@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -12,7 +13,9 @@ using Dashbrd.Shared.Common;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Radzen.Blazor.Rendering;
+using Polly;
+using Polly.Retry;
+using Timer = System.Timers.Timer;
 
 namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
 {
@@ -39,6 +42,14 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
         private readonly string _backgroudSize = "contain";
         private readonly string _backgroundPosition = "center";
 
+        private JsonSerializerOptions _options = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        private AsyncRetryPolicy<HttpResponseMessage> _authorisationEnsuringPolicy;
+
         private readonly Random _random = new();
 
         [Inject] private IConfiguration Configuration { get; set; }
@@ -56,6 +67,8 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
         public string[] Transitions { get; set; }
         public string PhotoprismApiUrl { get; set; }
         public string ApiToken { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
 
         private bool _playSlideshow = true;
         private int _index = 0;
@@ -76,6 +89,11 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
                 _transitions = Transitions;
             }
 
+            _authorisationEnsuringPolicy = Policy
+                .HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.Unauthorized)
+                .RetryAsync(
+                    retryCount: 1, // Consider how many retries. If auth lapses and you have valid credentials, one should be enough; too many tries can cause some auth systems to blacklist. 
+                    onRetryAsync:(_,_,_) =>GetApiToken());
 
             await base.OnInitializedAsync();
         }
@@ -85,17 +103,26 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
             return await Result.Try(async () =>
             {
                 var httpClient = HttpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.Add("X-Session-ID", ApiToken);
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                };
+                
                 _imageFiles.Clear();
-                var images = await httpClient.GetFromJsonAsync<List<PhotoprismImage>>($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites", options);
-                Logger.LogInformation($"Received {images.Count} images from photoprism");
-                _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
-                Shuffle(_imageFiles);
-                _index = 0;
+                var response = await _authorisationEnsuringPolicy.ExecuteAsync(() =>
+                {
+                    if (httpClient.DefaultRequestHeaders.Contains("X-Session-ID"))
+                    {
+                        httpClient.DefaultRequestHeaders.Remove("X-Session-ID");
+                    }
+                    httpClient.DefaultRequestHeaders.Add("X-Session-ID", ApiToken);
+                    return httpClient.GetAsync($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites");
+                });
+                if (response.IsSuccessStatusCode)
+                {
+                    var images = await response.Content.ReadFromJsonAsync<List<PhotoprismImage>>(_options);
+                    Logger.LogInformation($"Received {images.Count} images from Photo Prism");
+                    _imageFiles.AddRange(images.Select(i => i.Thumbs.Fit1920?.Src ?? i.Thumbs.Fit1280?.Src ?? i.Thumbs.Fit720?.Src));
+                    Shuffle(_imageFiles);
+                    _index = 0;
+                }
+                // var images = await httpClient.GetFromJsonAsync<List<PhotoprismImage>>($"{PhotoprismApiUrl}/api/v1/photos/view?count=1000&q=favorites", _options);
             }).TapError(e =>
             {
                 _index = -1;
@@ -222,7 +249,8 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
             {
                 var httpClient = HttpClientFactory.CreateClient();
                 //httpClient.DefaultRequestHeaders.Add("X-Download-Token", _downloadToken);
-                var httpResponseMessage = await httpClient.GetAsync($"{PhotoprismApiUrl}{fileLocation}");
+                var httpResponseMessage = await _authorisationEnsuringPolicy.ExecuteAsync(() => httpClient.GetAsync($"{PhotoprismApiUrl}{fileLocation}"));
+                // var httpResponseMessage = await httpClient.GetAsync($"{PhotoprismApiUrl}{fileLocation}");
 
                 if (httpResponseMessage.IsSuccessStatusCode)
                 {
@@ -297,6 +325,22 @@ namespace Dashbrd.Shared.Modules.PhotoprismBackgroundImageSlideshow
             //     TransitionStyle = $"animation-duration: {transitionSpeed}; transition-duration: {transitionSpeed}; animation-timing-function: {transitionTimingFunction};";
             //     Style += $"animation-duration: {_backgroundAnimationDuration}";
             // }
+        }
+
+        private async Task GetApiToken()
+        {
+            var httpClient = HttpClientFactory.CreateClient();
+            var user = new PhotoPrismUser
+            {
+                Username = Username,
+                Password = Password
+            };
+            var response = await httpClient.PostAsJsonAsync($"{PhotoprismApiUrl}/api/v1/session", user, _options);
+            if (response.IsSuccessStatusCode)
+            {
+                var temp = await response.Content.ReadFromJsonAsync<PhotoPrismSessionResponse>();
+                ApiToken = temp.Id;
+            }
         }
     }
 }
