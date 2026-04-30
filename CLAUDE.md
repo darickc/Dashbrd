@@ -22,7 +22,7 @@ There are no tests in this project.
 
 ## Architecture
 
-**Dashbrd** is a kiosk-style information dashboard built with Blazor Server (.NET 7). It displays weather, calendar, solar production, media playback, and photo slideshows on a single-page dark-themed display.
+**Dashbrd** is a kiosk-style information dashboard built with Blazor Server (.NET 10). It displays weather, calendar, solar production, media playback, and photo slideshows on a single-page dark-themed display.
 
 ### Two-Project Structure
 
