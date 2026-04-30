@@ -150,8 +150,8 @@ namespace Dashbrd.Shared.Modules.SolarEdge
 
         private async Task GetPower()
         {
-            var start = DateTime.Now.AddHours(-24).ToString("yyyy-M-d HH:mm:ss");
-            var end = DateTime.Now.ToString("yyyy-M-d HH:mm:ss");
+            var start = Uri.EscapeDataString(DateTime.Now.AddHours(-24).ToString("yyyy-MM-dd HH:mm:ss"));
+            var end = Uri.EscapeDataString(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             var url = $"{BaseUrl}{SiteId}/power?endTime={end}&startTime={start}&api_key={ApiKey}";
             try
             {
@@ -200,8 +200,8 @@ namespace Dashbrd.Shared.Modules.SolarEdge
 
         private async Task GetEnergy()
         {
-            var start = DateTime.Now.AddDays(-6).ToString("yyyy-M-d");
-            var end = DateTime.Now.ToString("yyyy-M-d");
+            var start = DateTime.Now.AddDays(-6).ToString("yyyy-MM-dd");
+            var end = DateTime.Now.ToString("yyyy-MM-dd");
             var url = $"{BaseUrl}{SiteId}/energy?timeUnit=DAY&endDate={end}&startDate={start}&api_key={ApiKey}";
             try
             {
