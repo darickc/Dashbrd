@@ -1,5 +1,11 @@
 ﻿.jellyfin{
-    min-width:300px;
+    min-width:var(--media-min-width);
+    max-width:var(--media-max-width);
+}
+
+.logo{
+    max-height:var(--media-logo-height);
+    max-width:100%;
 }
 
 .progress {

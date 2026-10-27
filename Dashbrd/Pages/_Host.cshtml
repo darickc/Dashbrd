@@ -32,12 +32,13 @@
         <a class="dismiss">🗙</a>
     </div>
 
-    <script src="_framework/blazor.server.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
 <!-- This is the glue between Blazor and Chart.js -->
 <script src="_content/ChartJs.Blazor.Fork/ChartJsBlazorInterop.js"></script>
 <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+<!-- Load Blazor last so components can't call into the scripts above before they've loaded -->
+<script src="_framework/blazor.server.js"></script>
 <script>
     Blazor.defaultReconnectionHandler._reconnectCallback = function (d) {
         document.location.reload();

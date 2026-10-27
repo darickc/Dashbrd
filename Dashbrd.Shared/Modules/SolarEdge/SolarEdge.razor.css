@@ -1,1 +1,1 @@
-.chart{display:inline-block}::deep .chartjs-render-monitor{display:inline !important}
+.chart{display:inline-block;width:var(--chart-width)}.chart ::deep canvas{width:100% !important;height:auto !important}::deep .chartjs-render-monitor{display:inline !important}

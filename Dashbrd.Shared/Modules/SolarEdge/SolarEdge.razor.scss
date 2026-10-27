@@ -1,5 +1,11 @@
 .chart{
     display:inline-block;
+    width:var(--chart-width);
+}
+// Chart.js only sizes the canvas on creation, so let CSS scale it when --chart-width changes.
+.chart ::deep canvas{
+    width:100% !important;
+    height:auto !important;
 }
 ::deep .chartjs-render-monitor{
     display:inline !important;

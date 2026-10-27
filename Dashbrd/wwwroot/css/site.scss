@@ -17,6 +17,19 @@
     }
 }
 
+/**
+ * Sizing shared with module styles. Overridden by the compact layout below.
+ */
+
+:root {
+    --gutter: 60px;
+    --chart-width: 400px;
+    --media-min-width: 300px;
+    --media-max-width: none;
+    --media-logo-height: 150px;
+    --calendar-max-width: none;
+}
+
 html {
     cursor: none;
     overflow: hidden;
@@ -29,10 +42,10 @@ html {
 }
 
 body {
-    margin: 60px;
+    margin: var(--gutter);
     position: absolute;
-    height: calc(100% - 120px);
-    width: calc(100% - 120px);
+    height: calc(100% - 2 * var(--gutter));
+    width: calc(100% - 2 * var(--gutter));
     background: #000;
     /*color: #aaa;*/
     color: #fff;
@@ -163,10 +176,10 @@ sup {
 
 .region.fullscreen {
     position: absolute;
-    top: -60px;
-    left: -60px;
-    right: -60px;
-    bottom: -60px;
+    top: calc(-1 * var(--gutter));
+    left: calc(-1 * var(--gutter));
+    right: calc(-1 * var(--gutter));
+    bottom: calc(-1 * var(--gutter));
     pointer-events: none;
 }
 
@@ -253,4 +266,117 @@ sup {
     width: 100%;
     border-spacing: 0;
     border-collapse: separate;
+}
+
+
+/**
+ * Compact layout for smaller screens (e.g. tablets).
+ */
+
+@media (max-width: 1400px), (max-height: 900px) {
+    :root {
+        --gutter: 24px;
+        --chart-width: min(300px, 30vw);
+        --media-min-width: 200px;
+        --media-max-width: 34vw;
+        --media-logo-height: 70px;
+        --calendar-max-width: 32vw;
+    }
+
+    body {
+        font-size: 1.5em;
+    }
+
+    .xsmall {
+        font-size: 13px;
+        line-height: 17px;
+    }
+
+    .small {
+        font-size: 16px;
+        line-height: 21px;
+    }
+
+    .medium {
+        font-size: 22px;
+        line-height: 27px;
+    }
+
+    .large {
+        font-size: 48px;
+        line-height: 48px;
+    }
+
+    .xlarge {
+        font-size: 56px;
+        line-height: 56px;
+    }
+
+    header {
+        font-size: 13px;
+    }
+
+    .module {
+        margin-bottom: 15px;
+    }
+
+    .region.bottom .module {
+        margin-top: 15px;
+    }
+
+    .region.top .container {
+        margin-bottom: 12px;
+    }
+
+    .region.bottom .container {
+        margin-top: 12px;
+    }
+}
+
+/**
+ * Narrow layout, e.g. when a kiosk app's media panel takes part of the screen.
+ */
+
+@media (max-width: 1000px) {
+    :root {
+        --gutter: 16px;
+        --chart-width: min(260px, 32vw);
+        --media-min-width: 160px;
+        --media-max-width: 30vw;
+        --media-logo-height: 60px;
+        --calendar-max-width: 30vw;
+    }
+
+    body {
+        font-size: 1.25em;
+    }
+
+    .xsmall {
+        font-size: 12px;
+        line-height: 15px;
+    }
+
+    .small {
+        font-size: 14px;
+        line-height: 18px;
+    }
+
+    .medium {
+        font-size: 18px;
+        line-height: 22px;
+    }
+
+    .large {
+        font-size: 40px;
+        line-height: 40px;
+    }
+
+    .xlarge {
+        font-size: 48px;
+        line-height: 48px;
+    }
+
+    header {
+        font-size: 12px;
+    }
 }

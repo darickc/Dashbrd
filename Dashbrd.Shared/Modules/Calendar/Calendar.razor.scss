@@ -15,6 +15,7 @@ tr{
     }
 }
 .calendar {
+    max-width: var(--calendar-max-width);
     animation: opacity 1s ease-in-out;
 }
 
