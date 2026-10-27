@@ -6,6 +6,8 @@ EXPOSE 80
 EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# LibSassBuilder's compiler tool targets .NET 7; let it run on the newer runtime in this image.
+ENV DOTNET_ROLL_FORWARD=Major
 WORKDIR /src
 COPY ["Dashbrd/Dashbrd.csproj", "Dashbrd/"]
 COPY ["Dashbrd.Shared/Dashbrd.Shared.csproj", "Dashbrd.Shared/"]
