@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -22,7 +23,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
 {
     public partial class SolarEdge
     {
-        private const string BaseUrl = "https://monitoringapi.solaredge.com/site/";
+        private const string BaseUrl = "https://monitoringapi.solaredge.com/v2/sites/";
         private const string Power = "SolarEdgePower";
         private const string Energy = "SolarEdgeEnergy";
         private Timer _timer;
@@ -148,17 +149,28 @@ namespace Dashbrd.Shared.Modules.SolarEdge
             }
         }
 
+        private async Task<SolarData> FetchSolarData(string path)
+        {
+            var client = HttpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Add("X-API-Key", ApiKey);
+            return await client.GetFromJsonAsync<SolarData>($"{BaseUrl}{SiteId}/{path}");
+        }
+
+        private static string FormatDate(DateTimeOffset date) =>
+            Uri.EscapeDataString(date.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture));
+
         private async Task GetPower()
         {
-            var start = Uri.EscapeDataString(DateTime.Now.AddHours(-24).ToString("yyyy-MM-dd HH:mm:ss"));
-            var end = Uri.EscapeDataString(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            var url = $"{BaseUrl}{SiteId}/power?endTime={end}&startTime={start}&api_key={ApiKey}";
+            // HOUR resolution allows at most 24h per request: the current hour plus the previous 23
+            var now = DateTimeOffset.Now;
+            var start = new DateTimeOffset(now.Year, now.Month, now.Day, now.Hour, 0, 0, now.Offset).AddHours(-23);
+            var path = $"power?from={FormatDate(start)}&to={FormatDate(now)}&resolution=HOUR&unit=KW";
             try
             {
                 SolarData power;
                 if (Test)
                 {
-                    power = GetData(true).Power;
+                    power = GetData(true);
                 }
                 else
                 {
@@ -168,24 +180,23 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                     }
                     else
                     {
-                        var client = HttpClientFactory.CreateClient();
-                        var data = await client.GetFromJsonAsync<Solar>(url);
-                        power = data.Power;
+                        power = await FetchSolarData(path);
 
                         var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval - 5));
                         MemoryCache.Set(Power, power, cacheEntryOptions);
                     }
                 }
 
-                var total = power.Values.Sum(v => v.Value) / 4 / 1000;
+                // Hourly average kW summed over the hours = kWh
+                var total = power.Values.Sum(v => v.Value);
                 LineConfig.Options.Title.Text = $"Daily Solar Production ({total: 0.0} kWh)";
                 LineConfig.Data.Labels.Clear();
-                foreach (var label in power.Values.Select(v => v.DateTime.ToString("HH:mm")))
+                foreach (var label in power.Values.Select(v => v.Timestamp.ToString("HH:mm")))
                 {
                     LineConfig.Data.Labels.Add(label);
                 }
 
-                var dataset = new LineDataset<float?>(power.Values.Select(v => v?.Value / 1000))
+                var dataset = new LineDataset<float?>(power.Values.Select(v => v?.Value))
                 {
                     BackgroundColor = ColorUtil.ColorString(255, 255, 255, .5),
                     PointStyle = new IndexableOption<PointStyle>(PointStyle.Line)
@@ -200,15 +211,15 @@ namespace Dashbrd.Shared.Modules.SolarEdge
 
         private async Task GetEnergy()
         {
-            var start = DateTime.Now.AddDays(-6).ToString("yyyy-MM-dd");
-            var end = DateTime.Now.ToString("yyyy-MM-dd");
-            var url = $"{BaseUrl}{SiteId}/energy?timeUnit=DAY&endDate={end}&startDate={start}&api_key={ApiKey}";
+            var start = new DateTimeOffset(DateTime.Today.AddDays(-6));
+            var end = DateTimeOffset.Now;
+            var path = $"energy?from={FormatDate(start)}&to={FormatDate(end)}&resolution=DAY&unit=KWH";
             try
             {
                 SolarData energy;
                 if (Test)
                 {
-                    energy = GetData(false).Energy;
+                    energy = GetData(false);
                 }
                 else
                 {
@@ -218,25 +229,23 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                     }
                     else
                     {
-                        var client = HttpClientFactory.CreateClient();
-                        var data = await client.GetFromJsonAsync<Solar>(url);
-                        energy = data.Energy;
+                        energy = await FetchSolarData(path);
 
                         var cacheEntryOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(UpdateInterval-5));
                         MemoryCache.Set(Energy, energy, cacheEntryOptions);
                     }
                 }
 
-                var total = energy.Values.Sum(v => v.Value) / 1000;
+                var total = energy.Values.Sum(v => v.Value);
                 BarConfig.Options.Title.Text = $"Weekly Solar Production ({total: 0.0} kWh)";
 
                 BarConfig.Data.Labels.Clear();
-                foreach (var label in energy.Values.Select(v => v.DateTime.ToString("M/d")))
+                foreach (var label in energy.Values.Select(v => v.Timestamp.ToString("M/d")))
                 {
                     BarConfig.Data.Labels.Add(label);
                 }
 
-                var dataset = new BarDataset<float?>(energy.Values.Select(v => v?.Value / 1000))
+                var dataset = new BarDataset<float?>(energy.Values.Select(v => v?.Value))
                 {
                     BackgroundColor = ColorUtil.ColorString(255, 255, 255, .5),
                 };
@@ -249,7 +258,7 @@ namespace Dashbrd.Shared.Modules.SolarEdge
         }
 
 
-        private Solar GetData(bool power)
+        private SolarData GetData(bool power)
         {
             var json = power ? PowerJson : EnergyJson;
             var options = new JsonSerializerOptions
@@ -257,444 +266,60 @@ namespace Dashbrd.Shared.Modules.SolarEdge
                 IncludeFields = true,
                 PropertyNameCaseInsensitive = true
             };
-            var forecast = JsonSerializer.Deserialize<Solar>(json, options);
-            return forecast;
+            return JsonSerializer.Deserialize<SolarData>(json, options);
         }
 
         private const string PowerJson = @"{
-    ""power"": {
-        ""timeUnit"": ""QUARTER_OF_AN_HOUR"",
-        ""unit"": ""W"",
-        ""measuredBy"": ""INVERTER"",
-        ""values"": [
-            {
-                ""date"": ""2021-01-15 00:00:00"",
-                ""value"": null
-            },
-            {
-                ""date"": ""2021-01-15 00:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 00:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 00:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 01:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 01:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 01:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 01:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 02:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 02:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 02:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 02:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 03:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 03:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 03:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 03:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 04:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 04:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 04:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 04:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 05:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 05:15:00"",
-                ""value"": 0.0
-            },
-            {
-    ""date"": ""2021-01-15 05:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 05:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 06:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 06:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 06:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 06:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 07:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 07:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 07:30:00"",
-                ""value"": 0.0
-            },
-            {
-    ""date"": ""2021-01-15 07:45:00"",
-                ""value"": 0.0
-            },
-            {
-    ""date"": ""2021-01-15 08:00:00"",
-                ""value"": 61.0
-            },
-            {
-    ""date"": ""2021-01-15 08:15:00"",
-                ""value"": 388.0
-            },
-            {
-    ""date"": ""2021-01-15 08:30:00"",
-                ""value"": 702.0
-            },
-            {
-    ""date"": ""2021-01-15 08:45:00"",
-                ""value"": 1197.0
-            },
-            {
-    ""date"": ""2021-01-15 09:00:00"",
-                ""value"": 1413.0
-            },
-            {
-    ""date"": ""2021-01-15 09:15:00"",
-                ""value"": 1151.0
-            },
-            {
-    ""date"": ""2021-01-15 09:30:00"",
-                ""value"": 1979.0
-            },
-            {
-    ""date"": ""2021-01-15 09:45:00"",
-                ""value"": 2187.0
-            },
-            {
-    ""date"": ""2021-01-15 10:00:00"",
-                ""value"": 2405.0
-            },
-            {
-    ""date"": ""2021-01-15 10:15:00"",
-                ""value"": 2597.0
-            },
-            {
-    ""date"": ""2021-01-15 10:30:00"",
-                ""value"": 2880.0
-            },
-            {
-    ""date"": ""2021-01-15 10:45:00"",
-                ""value"": 2815.0
-            },
-            {
-    ""date"": ""2021-01-15 11:00:00"",
-                ""value"": 2049.0
-            },
-            {
-    ""date"": ""2021-01-15 11:15:00"",
-                ""value"": 3413.0
-            },
-            {
-    ""date"": ""2021-01-15 11:30:00"",
-                ""value"": 3567.0
-            },
-            {
-    ""date"": ""2021-01-15 11:45:00"",
-                ""value"": 2384.0
-            },
-            {
-    ""date"": ""2021-01-15 12:00:00"",
-                ""value"": 3412.0
-            },
-            {
-    ""date"": ""2021-01-15 12:15:00"",
-                ""value"": 4048.0
-            },
-            {
-    ""date"": ""2021-01-15 12:30:00"",
-                ""value"": 2303.0
-            },
-            {
-    ""date"": ""2021-01-15 12:45:00"",
-                ""value"": 2052.0
-            },
-            {
-    ""date"": ""2021-01-15 13:00:00"",
-                ""value"": 3057.0
-            },
-            {
-    ""date"": ""2021-01-15 13:15:00"",
-                ""value"": 1715.0
-            },
-            {
-    ""date"": ""2021-01-15 13:30:00"",
-                ""value"": 1913.0
-            },
-            {
-    ""date"": ""2021-01-15 13:45:00"",
-                ""value"": 2410.0
-            },
-            {
-    ""date"": ""2021-01-15 14:00:00"",
-                ""value"": 2683.0
-            },
-            {
-    ""date"": ""2021-01-15 14:15:00"",
-                ""value"": 2413.0
-            },
-            {
-    ""date"": ""2021-01-15 14:30:00"",
-                ""value"": 1041.0
-            },
-            {
-    ""date"": ""2021-01-15 14:45:00"",
-                ""value"": 1138.0
-            },
-            {
-    ""date"": ""2021-01-15 15:00:00"",
-                ""value"": 913.0
-            },
-            {
-    ""date"": ""2021-01-15 15:15:00"",
-                ""value"": 703.0
-            },
-            {
-    ""date"": ""2021-01-15 15:30:00"",
-                ""value"": 861.0
-            },
-            {
-    ""date"": ""2021-01-15 15:45:00"",
-                ""value"": 729.0
-            },
-            {
-    ""date"": ""2021-01-15 16:00:00"",
-                ""value"": 253.0
-            },
-            {
-    ""date"": ""2021-01-15 16:15:00"",
-                ""value"": 208.0
-            },
-            {
-    ""date"": ""2021-01-15 16:30:00"",
-                ""value"": 75.0
-            },
-            {
-    ""date"": ""2021-01-15 16:45:00"",
-                ""value"": 53.0
-            },
-            {
-    ""date"": ""2021-01-15 17:00:00"",
-                ""value"": 0.0
-            },
-            {
-    ""date"": ""2021-01-15 17:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 17:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 17:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 18:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 18:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 18:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 18:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 19:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 19:15:00"",
-                ""value"": 0.0
-            },
-            {
-    ""date"": ""2021-01-15 19:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 19:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 20:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 20:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 20:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 20:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 21:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 21:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 21:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 21:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 22:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 22:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 22:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 22:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 23:00:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 23:15:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 23:30:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-15 23:45:00"",
-                ""value"": null
-            },
-            {
-    ""date"": ""2021-01-16 00:00:00"",
-                ""value"": null
-            }
-        ]
-    }
+    ""period"": {
+        ""from"": ""2021-01-15T00:00:00-07:00"",
+        ""to"": ""2021-01-15T23:59:59-07:00""
+    },
+    ""unit"": ""KW"",
+    ""resolution"": ""HOUR"",
+    ""values"": [
+        { ""timestamp"": ""2021-01-15T00:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T01:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T02:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T03:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T04:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T05:00:00-07:00"", ""value"": 0.0 },
+        { ""timestamp"": ""2021-01-15T06:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T07:00:00-07:00"", ""value"": 0.0 },
+        { ""timestamp"": ""2021-01-15T08:00:00-07:00"", ""value"": 0.587 },
+        { ""timestamp"": ""2021-01-15T09:00:00-07:00"", ""value"": 1.683 },
+        { ""timestamp"": ""2021-01-15T10:00:00-07:00"", ""value"": 2.674 },
+        { ""timestamp"": ""2021-01-15T11:00:00-07:00"", ""value"": 2.853 },
+        { ""timestamp"": ""2021-01-15T12:00:00-07:00"", ""value"": 2.954 },
+        { ""timestamp"": ""2021-01-15T13:00:00-07:00"", ""value"": 2.274 },
+        { ""timestamp"": ""2021-01-15T14:00:00-07:00"", ""value"": 1.819 },
+        { ""timestamp"": ""2021-01-15T15:00:00-07:00"", ""value"": 0.802 },
+        { ""timestamp"": ""2021-01-15T16:00:00-07:00"", ""value"": 0.147 },
+        { ""timestamp"": ""2021-01-15T17:00:00-07:00"", ""value"": 0.0 },
+        { ""timestamp"": ""2021-01-15T18:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T19:00:00-07:00"", ""value"": 0.0 },
+        { ""timestamp"": ""2021-01-15T20:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T21:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T22:00:00-07:00"", ""value"": null },
+        { ""timestamp"": ""2021-01-15T23:00:00-07:00"", ""value"": null }
+    ]
 }";
 
         private const string EnergyJson = @"{
-    ""energy"": {
-        ""timeUnit"": ""DAY"",
-        ""unit"": ""Wh"",
-        ""measuredBy"": ""INVERTER"",
-        ""values"": [
-        {
-            ""date"": ""2021-01-10 00:00:00"",
-            ""value"": 6350.0
-        },
-        {
-            ""date"": ""2021-01-11 00:00:00"",
-            ""value"": 17544.0
-        },
-        {
-            ""date"": ""2021-01-12 00:00:00"",
-            ""value"": 11039.0
-        },
-        {
-            ""date"": ""2021-01-13 00:00:00"",
-            ""value"": 7430.0
-        },
-        {
-            ""date"": ""2021-01-14 00:00:00"",
-            ""value"": 22054.0
-        },
-        {
-            ""date"": ""2021-01-15 00:00:00"",
-            ""value"": 16281.0
-        },
-        {
-            ""date"": ""2021-01-16 00:00:00"",
-            ""value"": null
-        }
-        ]
-    }
+    ""period"": {
+        ""from"": ""2021-01-10T00:00:00-07:00"",
+        ""to"": ""2021-01-16T23:59:59-07:00""
+    },
+    ""unit"": ""KWH"",
+    ""resolution"": ""DAY"",
+    ""values"": [
+        { ""timestamp"": ""2021-01-10T00:00:00-07:00"", ""value"": 6.35 },
+        { ""timestamp"": ""2021-01-11T00:00:00-07:00"", ""value"": 17.544 },
+        { ""timestamp"": ""2021-01-12T00:00:00-07:00"", ""value"": 11.039 },
+        { ""timestamp"": ""2021-01-13T00:00:00-07:00"", ""value"": 7.43 },
+        { ""timestamp"": ""2021-01-14T00:00:00-07:00"", ""value"": 22.054 },
+        { ""timestamp"": ""2021-01-15T00:00:00-07:00"", ""value"": 16.281 },
+        { ""timestamp"": ""2021-01-16T00:00:00-07:00"", ""value"": null }
+    ]
 }";
     }
 }
